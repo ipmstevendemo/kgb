@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+require "bundler/setup"
+require "dry/cli"
+require "kgb"
+
+module Kgb
+  module CLI
+    module Commands
+      extend Dry::CLI::Registry
+
+      class Version < Dry::CLI::Command
+        desc "Print version"
+
+        def call(*)
+          puts Kgb::VERSION
+        end
+      end
+
+      module Dealership
+        class Review < Dry::CLI::Command
+          desc "Find 3 overly positive for a given dealer, default dealer is `McKaig Chevrolet Buick`"
+
+          option :dealer_name, default: "McKaig Chevrolet Buick"
+
+          def call(dealer_name:, **)
+            puts "####################################################"
+            puts "Searching Dealer with name: #{dealer_name}"
+            puts "####################################################"
+
+            repository = Kgb::Dealership::Repository.new
+
+            dealers = repository.find_dealer(dealer_name)
+            if dealers.size > 1
+              puts "Found multiple dealers matched: #{dealer_name}:"
+              dealers.each do |dealer|
+                puts "- #{dealer.name}"
+              end
+              puts "please retry with one of the names above."
+            elsif dealers.empty?
+              puts "No Dealers has the name matched: #{dealer_name}, please retry with different name."
+            else
+              dealer = dealers.first
+              puts "Found Dealer: #{dealer.name}"
+
+              puts "Fetching reviews for first 5 pages"
+              reviews = repository.find_reviews(dealer, [1,2,3,4,5])
+              puts "Fetched reviews for first 5 pages, got #{reviews.size} reviews"
+
+              puts "Start reviews analysis"
+              analyzer = Kgb::SentimentAnalysis::Analyzer.new
+              result = reviews.map do |review|
+                [review, analyzer.score(review.content)]
+              end
+              puts "Finished reviews analysis"
+
+              puts "printing 3 overly positive"
+              puts "-----------------------------------------------------------------------------"
+              top_3_positive_reviews = result.sort_by{|tuple| - tuple.last}.first(3)
+              top_3_positive_reviews.each do |item|
+                review, score = item
+                puts "- Score: #{score}  Review: #{review.content}"
+              end
+              puts "-----------------------------------------------------------------------------"
+            end
+          end
+        end
+      end
+
+      register "version", Version, aliases: ["v", "-v", "--version"]
+      register "dealership", aliases: ["g"] do |prefix|
+        prefix.register "reviews", Dealership::Review
+      end
+    end
+  end
+end
+
+Dry::CLI.new(Kgb::CLI::Commands).call
