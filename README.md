@@ -1,8 +1,5 @@
 # Kgb
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/kgb`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-
 ## Installation
 
 ```bash
@@ -38,6 +35,11 @@ printing 3 overly positive
 ```bash
 bundle exec rake test
 ```
+
+## Criteria of endorsement score
+
+- There are two sentiment data files added, each has a word and its associated sentiment score, like(`0.75` => `awesome`, `-0.21875` => `cry`).
+- To calculate the sentiment score of a review, we first tokenize the review sentence and then calculate the sum of score for each token based on the mapping from sentiment data files. 
 
 ## License
 
